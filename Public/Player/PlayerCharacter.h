@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Weapons/WeaponType.h"
 #include "PlayerCharacter.generated.h" // keep last
 
 UCLASS()
@@ -47,6 +48,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	class UInputAction* LookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
+	class UParticleSystem* MuzzleFlash;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
+	class USoundCue* FireSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
+	class USoundAttenuation* FireSoundAttenuation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
+	class UParticleSystem* BulletImpactParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
+	class USoundCue* BulletImpactSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
+	class UMaterialInterface* BulletImpactDecal;
+
 	void OnFire();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -58,6 +77,9 @@ private:
 
 	UPROPERTY()
 	bool bIsADS;
+
+	UPROPERTY()
+	EWeaponType CurrentWeaponType;
 
 	struct FEnhancedInputActionValueBinding* MoveActionBinding;
 	struct FEnhancedInputActionValueBinding* LookActionBinding;

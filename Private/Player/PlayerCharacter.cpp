@@ -5,6 +5,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Weapons/WeaponType.h"
+#include "Sound/SoundCue.h"
 
 #include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
@@ -47,6 +50,8 @@ void APlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(PlayerMappingContext, 0);
 		}
 	}
+
+	CurrentWeaponType = EWeaponType::EWT_AssaultRifle;
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -75,10 +80,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &APlayerCharacter::OnFire);
 }
 
-void APlayerCharacter::OnFire()
-{
-}
-
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	const FVector2D MovementVector = Value.Get<FVector2D>();
@@ -91,6 +92,66 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 	AddControllerPitchInput(LookAxisVector.Y * LookUpRate);
 	AddControllerYawInput(LookAxisVector.X * TurnRate);
+}
+
+void APlayerCharacter::OnFire()
+{
+	if (bIsReloadingOrSwitching) { return; }
+
+	if (CurrentWeaponType == EWeaponType::EWT_AssaultRifle)
+	{
+		UGameplayStatics::SpawnEmitterAttached(
+			MuzzleFlash,
+			GunMesh,
+			"SOCKET_Muzzle",
+			FVector(),
+			FRotator(0.f, 90.f, 0.f),
+			EAttachLocation::SnapToTarget);
+
+		UGameplayStatics::SpawnSoundAttached(
+			FireSound,
+			GunMesh,
+			FName(),
+			FVector(),
+			EAttachLocation::SnapToTarget,
+			false,
+			1.f, 1.f, 0.f,
+			FireSoundAttenuation);
+
+		FHitResult OutHit;
+		FVector TraceStart = FirstPersonCamera->GetComponentLocation();
+		FVector TraceEnd = TraceStart + FirstPersonCamera->GetForwardVector() * TRACE_LENGTH;
+
+		GetWorld()->LineTraceSingleByChannel(
+			OutHit,
+			TraceStart,
+			TraceEnd,
+			ECollisionChannel::ECC_Visibility);
+
+		if (OutHit.IsValidBlockingHit())
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(
+				GetWorld(),
+				BulletImpactParticle,
+				OutHit.ImpactPoint,
+				UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
+				true);
+
+			UGameplayStatics::SpawnSoundAtLocation(
+				GetWorld(),
+				BulletImpactSound,
+				OutHit.ImpactPoint);
+
+			UGameplayStatics::SpawnDecalAttached(
+				BulletImpactDecal,
+				FVector(4.f, 4.f, 4.f),
+				OutHit.GetComponent(),
+				OutHit.BoneName,
+				OutHit.ImpactPoint,
+				UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
+				EAttachLocation::KeepWorldPosition);
+		}
+	}
 }
 
 void APlayerCharacter::WeaponSway(float DeltaTime)
