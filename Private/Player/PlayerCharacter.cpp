@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Weapons/WeaponType.h"
 #include "Sound/SoundCue.h"
+#include "Components/TimelineComponent.h"
 
 #include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
@@ -31,6 +32,9 @@ APlayerCharacter::APlayerCharacter()
 	GunMesh->SetOnlyOwnerSee(true);
 	GunMesh->bCastDynamicShadow = false;
 	GunMesh->CastShadow = false;
+
+	RecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimelineComponent"));
+	RecoilAnimationTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilAnimationTimelineComponent"));
 }
 
 void APlayerCharacter::BeginPlay()
@@ -52,6 +56,17 @@ void APlayerCharacter::BeginPlay()
 	}
 
 	CurrentWeaponType = EWeaponType::EWT_AssaultRifle;
+
+	// Setup recoil timeline
+	RecoilTrack.BindDynamic(this, &APlayerCharacter::UpdateRecoil);
+	RecoilTimeline->AddInterpFloat(RecoilCurve, RecoilTrack);
+	RecoilTimeline->SetPlayRate(1.f / RecoilDuration);
+
+	// Setup recoil animation timeline
+	RecoilAnimationTrack.BindDynamic(this, &APlayerCharacter::UpdateRecoilAnimation);
+	RecoilAnimationTimeline->AddInterpFloat(RecoilAnimationCurve, RecoilAnimationTrack);
+	RecoilAnimationFinished.BindUFunction(this, FName("HandleRecoilAnimationFinished"));
+	RecoilAnimationTimeline->SetTimelineFinishedFunc(RecoilAnimationFinished);
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -94,12 +109,72 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	AddControllerYawInput(LookAxisVector.X * TurnRate);
 }
 
+void APlayerCharacter::UpdateRecoil(float RecoilValue)
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	FRotator ControlRotation = PlayerController->GetControlRotation();
+	
+	float A = GetRecoilPitch(ControlRotation.Pitch);
+	float B = A + (RecoilVerticalAmount / GetRecoilMultiplier());
+	float NewPitch = FMath::Lerp(A, B, RecoilValue);
+
+	PlayerController->SetControlRotation(
+		FRotator(
+			NewPitch,
+			ControlRotation.Yaw,
+			ControlRotation.Roll));
+
+	float YawInput = (FMath::FRand() * 2.f - 1.f) * (RecoilHorizontalAmount / GetRecoilMultiplier());
+	AddControllerYawInput(YawInput);
+}
+
+void APlayerCharacter::UpdateRecoilAnimation(float RecoilAnimationValue)
+{
+	if (!bHasSetRecoilVariables)
+	{
+		SetRecoilAnimationVariables();
+		bHasSetRecoilVariables = true;
+	}
+
+	float NewPitch = FMath::Lerp(PreRecoilArmsPitch, PostRecoilArmsPitch, RecoilAnimationValue);
+	ArmsMesh->SetRelativeRotation(
+		FRotator(
+			NewPitch,
+			ArmsMesh->GetRelativeRotation().Yaw,
+			ArmsMesh->GetRelativeRotation().Roll));
+
+	float NewLocationX = FMath::Lerp(PreRecoilArmsLocationX, PostRecoilArmsLocationX, RecoilAnimationValue);
+	ArmsMesh->SetRelativeLocation(
+		FVector(
+			NewLocationX,
+			ArmsMesh->GetRelativeLocation().Y,
+			ArmsMesh->GetRelativeLocation().Z));
+}
+
+void APlayerCharacter::HandleRecoilAnimationFinished()
+{
+	bHasSetRecoilVariables = false;
+}
+
+void APlayerCharacter::StartRecoil()
+{
+	RecoilTimeline->PlayFromStart();
+}
+
+void APlayerCharacter::StartRecoilAnimation()
+{
+	RecoilAnimationTimeline->PlayFromStart();
+}
+
 void APlayerCharacter::OnFire()
 {
 	if (bIsReloadingOrSwitching) { return; }
 
 	if (CurrentWeaponType == EWeaponType::EWT_AssaultRifle)
 	{
+		StartRecoil();
+		StartRecoilAnimation();
+
 		UGameplayStatics::SpawnEmitterAttached(
 			MuzzleFlash,
 			GunMesh,
@@ -189,5 +264,26 @@ void APlayerCharacter::WeaponSway(float DeltaTime)
 
 		ArmsMesh->SetRelativeRotation(NewRotation);
 	}
+}
+
+float APlayerCharacter::GetRecoilMultiplier()
+{
+	float A = bIsADS ? 1.5f : 0.f;
+	float B = bIsCrouching ? 1.5f : 0.f;
+	return FMath::Clamp(A + B, 1.0f, 1.8f);
+}
+
+float APlayerCharacter::GetRecoilPitch(float ControlPitch)
+{
+	return ControlPitch > 180.f ? ControlPitch - 360.f : ControlPitch;
+}
+
+void APlayerCharacter::SetRecoilAnimationVariables()
+{
+	PreRecoilArmsPitch = ArmsMesh->GetRelativeRotation().Pitch;
+	PostRecoilArmsPitch = PreRecoilArmsPitch + (RecoilVerticalAmount / GetRecoilMultiplier());
+
+	PreRecoilArmsLocationX = ArmsMesh->GetRelativeLocation().X;
+	PostRecoilArmsLocationX = PreRecoilArmsLocationX + (PullBackAmount / GetRecoilMultiplier() * -1.f);
 }
 
