@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Weapons/WeaponType.h"
+#include "Player/PlayerHUD.h"
 #include "Components/TimelineComponent.h"
 #include "WeaponComponent.generated.h"
 
@@ -31,7 +32,16 @@ public:
 	class APlayerCharacter* Character;
 
 	UPROPERTY()
+	class APlayerController* Controller;
+
+	UPROPERTY()
+	class APlayerHUD* HUD;
+
+	UPROPERTY()
+	class AWeapon* EquippedWeapon;
+
 	EWeaponType CurrentWeaponType;
+	FHUDPackage HUDPackage;
 
 	void FireWeapon();
 	void WeaponSway(float DeltaTime);
@@ -94,5 +104,6 @@ public:
 	float GetRecoilMultiplier();
 	float GetRecoilPitch(float ControlPitch);
 	void SetRecoilAnimationVariables();
+	void SetHUDCrosshairs(float DeltaTime);
 		
 };

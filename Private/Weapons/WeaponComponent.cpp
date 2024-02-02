@@ -3,9 +3,12 @@
 
 #include "Weapons/WeaponComponent.h"
 #include "Player/PlayerCharacter.h"
+#include "Player/PlayerHUD.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Weapons/WeaponType.h"
+#include "Weapons/Weapon.h"
 #include "Sound/SoundCue.h"
 #include "Components/TimelineComponent.h"
 #include "Camera/CameraComponent.h"
@@ -31,7 +34,14 @@ void UWeaponComponent::BeginPlay()
 	RecoilAnimationFinished.BindUFunction(this, FName("HandleRecoilAnimationFinished"));
 	Character->RecoilAnimationTimeline->SetTimelineFinishedFunc(RecoilAnimationFinished);
 
-	CurrentWeaponType = EWeaponType::EWT_AssaultRifle;
+	// TEMP: Simulate equipping a weapon
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(this, AWeapon::StaticClass(), OutActors);
+	if (OutActors.Num() > 0)
+	{
+		EquippedWeapon = Cast<AWeapon>(OutActors[0]);
+		CurrentWeaponType = EWeaponType::EWT_AssaultRifle;
+	}
 }
 
 void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -39,6 +49,7 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	WeaponSway(DeltaTime);
+	SetHUDCrosshairs(DeltaTime);
 }
 
 void UWeaponComponent::WeaponSway(float DeltaTime)
@@ -217,4 +228,29 @@ void UWeaponComponent::SetRecoilAnimationVariables()
 
 	PreRecoilArmsLocationX = Character->ArmsMesh->GetRelativeLocation().X;
 	PostRecoilArmsLocationX = PreRecoilArmsLocationX + (PullBackAmount / GetRecoilMultiplier() * -1.f);
+}
+
+void UWeaponComponent::SetHUDCrosshairs(float DeltaTime)
+{
+	if (Character == nullptr || Character->Controller == nullptr || EquippedWeapon == nullptr) return;
+
+	Controller = Controller == nullptr ? Cast<APlayerController>(Character->Controller) : Controller;
+	
+	if (Controller)
+	{
+		HUD = HUD == nullptr ? Cast<APlayerHUD>(Controller->GetHUD()) : HUD;
+
+		if (HUD)
+		{
+			HUDPackage.CrosshairsCenter = EquippedWeapon->CrosshairsCenter;
+			HUDPackage.CrosshairsLeft = EquippedWeapon->CrosshairsLeft;
+			HUDPackage.CrosshairsRight = EquippedWeapon->CrosshairsRight;
+			HUDPackage.CrosshairsBottom = EquippedWeapon->CrosshairsBottom;
+			HUDPackage.CrosshairsTop = EquippedWeapon->CrosshairsTop;
+
+			HUDPackage.CrosshairsColor = FLinearColor::Green;
+
+			HUD->SetHUDPackage(HUDPackage);
+		}
+	}
 }
