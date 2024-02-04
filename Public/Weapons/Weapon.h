@@ -21,7 +21,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 public:
-	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
+	UPROPERTY(VisibleAnywhere)
 	USkeletalMeshComponent* WeaponMesh;
 
 	UPROPERTY(EditAnywhere, Category = Crosshairs)
@@ -39,4 +39,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = Crosshairs)
 	class UTexture2D* CrosshairsBottom;
 
+	/**
+	* Weapon Stats
+	*/
+	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
+	float FireDelay = .1f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
+	bool bIsAutomatic = true;
 };

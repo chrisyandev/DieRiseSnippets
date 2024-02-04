@@ -75,7 +75,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &APlayerCharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &APlayerCharacter::StopJumping);
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &APlayerCharacter::OnFire);
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &APlayerCharacter::FirePressed);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &APlayerCharacter::FireReleased);
 }
 
 void APlayerCharacter::PostInitializeComponents()
@@ -83,6 +84,16 @@ void APlayerCharacter::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 	Weapon->Character = this;
+}
+
+void APlayerCharacter::FirePressed()
+{
+	Weapon->StartFireWeapon();
+}
+
+void APlayerCharacter::FireReleased()
+{
+	Weapon->StopFireWeapon();
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -97,10 +108,5 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 	AddControllerPitchInput(LookAxisVector.Y * LookUpRate);
 	AddControllerYawInput(LookAxisVector.X * TurnRate);
-}
-
-void APlayerCharacter::OnFire()
-{
-	Weapon->FireWeapon();
 }
 

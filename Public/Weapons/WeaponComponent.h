@@ -43,8 +43,13 @@ public:
 	EWeaponType CurrentWeaponType;
 	FHUDPackage HUDPackage;
 
-	void FireWeapon();
+	bool bIsFirePressed = false;
+	bool bCanFire = true;
+
+	void StartFireWeapon();
+	void StopFireWeapon();
 	void WeaponSway(float DeltaTime);
+	void SetHUDCrosshairs(float DeltaTime);
 
 	/**
 	* Weapon Effects
@@ -104,6 +109,16 @@ public:
 	float GetRecoilMultiplier();
 	float GetRecoilPitch(float ControlPitch);
 	void SetRecoilAnimationVariables();
-	void SetHUDCrosshairs(float DeltaTime);
-		
+	
+	/**
+	* Automatic Fire
+	*/
+	FTimerHandle FireTimer;
+
+	void StartFireTimer();
+	void HandleFireTimerFinished();
+
+private:
+	void FireWeapon();
+
 };

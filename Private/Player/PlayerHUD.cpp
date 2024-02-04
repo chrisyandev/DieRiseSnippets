@@ -9,38 +9,23 @@ void APlayerHUD::DrawHUD()
 
 	FVector2D ViewportSize;
 
-	if (GEngine)
+	if (GEngine == nullptr || GEngine->GameViewport == nullptr) return;
+
+	GEngine->GameViewport->GetViewportSize(ViewportSize);
+	const FVector2D ViewportCenter(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
+	float SpreadScaled = CrosshairSpreadMax * HUDPackage.CrosshairSpread;
+
+	if (HUDPackage.CrosshairsCenter &&
+		HUDPackage.CrosshairsLeft &&
+		HUDPackage.CrosshairsRight &&
+		HUDPackage.CrosshairsTop &&
+		HUDPackage.CrosshairsBottom)
 	{
-		GEngine->GameViewport->GetViewportSize(ViewportSize);
-		const FVector2D ViewportCenter(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
-
-		float SpreadScaled = CrosshairSpreadMax * HUDPackage.CrosshairSpread;
-
-		if (HUDPackage.CrosshairsCenter)
-		{
-			FVector2D Spread(0.f, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsCenter, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
-		if (HUDPackage.CrosshairsLeft)
-		{
-			FVector2D Spread(-SpreadScaled, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsLeft, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
-		if (HUDPackage.CrosshairsRight)
-		{
-			FVector2D Spread(SpreadScaled, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsRight, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
-		if (HUDPackage.CrosshairsTop)
-		{
-			FVector2D Spread(0.f, -SpreadScaled);
-			DrawCrosshair(HUDPackage.CrosshairsTop, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
-		if (HUDPackage.CrosshairsBottom)
-		{
-			FVector2D Spread(0.f, SpreadScaled);
-			DrawCrosshair(HUDPackage.CrosshairsBottom, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
+		DrawCrosshair(HUDPackage.CrosshairsCenter, ViewportCenter, FVector2D(0.f, 0.f), HUDPackage.CrosshairsColor);
+		DrawCrosshair(HUDPackage.CrosshairsLeft, ViewportCenter, FVector2D(-SpreadScaled, 0.f), HUDPackage.CrosshairsColor);
+		DrawCrosshair(HUDPackage.CrosshairsRight, ViewportCenter, FVector2D(SpreadScaled, 0.f), HUDPackage.CrosshairsColor);
+		DrawCrosshair(HUDPackage.CrosshairsTop, ViewportCenter, FVector2D(0.f, -SpreadScaled), HUDPackage.CrosshairsColor);
+		DrawCrosshair(HUDPackage.CrosshairsBottom, ViewportCenter, FVector2D(0.f, SpreadScaled), HUDPackage.CrosshairsColor);
 	}
 }
 

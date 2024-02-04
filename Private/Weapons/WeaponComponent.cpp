@@ -13,6 +13,7 @@
 #include "Components/TimelineComponent.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
+#include "TimerManager.h"
 
 UWeaponComponent::UWeaponComponent()
 {
@@ -50,6 +51,17 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 	WeaponSway(DeltaTime);
 	SetHUDCrosshairs(DeltaTime);
+}
+
+void UWeaponComponent::StartFireWeapon()
+{
+	bIsFirePressed = true;
+	FireWeapon();
+}
+
+void UWeaponComponent::StopFireWeapon()
+{
+	bIsFirePressed = false;
 }
 
 void UWeaponComponent::WeaponSway(float DeltaTime)
@@ -91,10 +103,11 @@ void UWeaponComponent::WeaponSway(float DeltaTime)
 
 void UWeaponComponent::FireWeapon()
 {
-	if (Character->bIsReloadingOrSwitching) { return; }
-
-	if (CurrentWeaponType == EWeaponType::EWT_AssaultRifle)
+	if (bCanFire)
 	{
+		bCanFire = false;
+		StartFireTimer();
+
 		StartRecoil();
 		StartRecoilAnimation();
 
@@ -211,8 +224,8 @@ void UWeaponComponent::StartRecoilAnimation()
 
 float UWeaponComponent::GetRecoilMultiplier()
 {
-	float A = Character->bIsADS ? 1.5f : 0.f;
-	float B = Character->bIsCrouching ? 1.5f : 0.f;
+	float A = Character->bHasRecoilReductionPerk ? 1.5f : 0.f;
+	float B = Character->bIsCrouched ? 1.5f : 0.f;
 	return FMath::Clamp(A + B, 1.0f, 1.8f);
 }
 
@@ -230,10 +243,26 @@ void UWeaponComponent::SetRecoilAnimationVariables()
 	PostRecoilArmsLocationX = PreRecoilArmsLocationX + (PullBackAmount / GetRecoilMultiplier() * -1.f);
 }
 
+void UWeaponComponent::StartFireTimer()
+{
+	bCanFire = false;
+
+	Character->GetWorldTimerManager()
+		.SetTimer(FireTimer, this, &UWeaponComponent::HandleFireTimerFinished, EquippedWeapon->FireDelay);
+}
+
+void UWeaponComponent::HandleFireTimerFinished()
+{
+	bCanFire = true;
+
+	if (bIsFirePressed && EquippedWeapon->bIsAutomatic)
+	{
+		FireWeapon();
+	}
+}
+
 void UWeaponComponent::SetHUDCrosshairs(float DeltaTime)
 {
-	if (Character == nullptr || Character->Controller == nullptr || EquippedWeapon == nullptr) return;
-
 	Controller = Controller == nullptr ? Cast<APlayerController>(Character->Controller) : Controller;
 	
 	if (Controller)
@@ -248,7 +277,7 @@ void UWeaponComponent::SetHUDCrosshairs(float DeltaTime)
 			HUDPackage.CrosshairsBottom = EquippedWeapon->CrosshairsBottom;
 			HUDPackage.CrosshairsTop = EquippedWeapon->CrosshairsTop;
 
-			HUDPackage.CrosshairsColor = FLinearColor::Green;
+			HUDPackage.CrosshairsColor = FLinearColor::White; // TODO: crosshair color
 
 			HUD->SetHUDPackage(HUDPackage);
 		}

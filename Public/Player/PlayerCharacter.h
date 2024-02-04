@@ -46,10 +46,7 @@ public:
 	bool bIsReloadingOrSwitching = false;
 
 	UPROPERTY(BlueprintReadOnly)
-	bool bIsADS = false;
-
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsCrouching = false;
+	bool bHasRecoilReductionPerk = false;
 
 	/**
 	* Input
@@ -72,7 +69,8 @@ public:
 	struct FEnhancedInputActionValueBinding* MoveActionBinding;
 	struct FEnhancedInputActionValueBinding* LookActionBinding;
 
-	void OnFire();
+	void FirePressed();
+	void FireReleased();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
