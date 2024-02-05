@@ -25,12 +25,7 @@ APlayerCharacter::APlayerCharacter()
 	ArmsMesh->bCastDynamicShadow = false;
 	ArmsMesh->CastShadow = false;
 
-	GunMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GunMesh"));
-	GunMesh->SetOnlyOwnerSee(true);
-	GunMesh->bCastDynamicShadow = false;
-	GunMesh->CastShadow = false;
-
-	Weapon = CreateDefaultSubobject<UWeaponComponent>(TEXT("Weapon"));
+	WeaponComp = CreateDefaultSubobject<UWeaponComponent>(TEXT("WeaponComp"));
 	RecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
 	RecoilAnimationTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilAnimationTimeline"));
 }
@@ -39,11 +34,6 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// Attach gun to arms
-	GunMesh->AttachToComponent(ArmsMesh,
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		TEXT("SOCKET_Weapon"));
-
 	// Setup player input
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -77,23 +67,14 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &APlayerCharacter::StopJumping);
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &APlayerCharacter::FirePressed);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &APlayerCharacter::FireReleased);
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &APlayerCharacter::ReloadPressed);
 }
 
 void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	Weapon->Character = this;
-}
-
-void APlayerCharacter::FirePressed()
-{
-	Weapon->StartFireWeapon();
-}
-
-void APlayerCharacter::FireReleased()
-{
-	Weapon->StopFireWeapon();
+	WeaponComp->Character = this;
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
@@ -108,5 +89,20 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 	AddControllerPitchInput(LookAxisVector.Y * LookUpRate);
 	AddControllerYawInput(LookAxisVector.X * TurnRate);
+}
+
+void APlayerCharacter::FirePressed()
+{
+	WeaponComp->StartFireWeapon();
+}
+
+void APlayerCharacter::FireReleased()
+{
+	WeaponComp->StopFireWeapon();
+}
+
+void APlayerCharacter::ReloadPressed()
+{
+	WeaponComp->StartReloadWeapon();
 }
 

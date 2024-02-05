@@ -14,6 +14,7 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "TimerManager.h"
+#include "DieRise/DebugMacros.h"
 
 UWeaponComponent::UWeaponComponent()
 {
@@ -36,13 +37,8 @@ void UWeaponComponent::BeginPlay()
 	Character->RecoilAnimationTimeline->SetTimelineFinishedFunc(RecoilAnimationFinished);
 
 	// TEMP: Simulate equipping a weapon
-	TArray<AActor*> OutActors;
-	UGameplayStatics::GetAllActorsOfClass(this, AWeapon::StaticClass(), OutActors);
-	if (OutActors.Num() > 0)
-	{
-		EquippedWeapon = Cast<AWeapon>(OutActors[0]);
-		CurrentWeaponType = EWeaponType::EWT_AssaultRifle;
-	}
+	EquippedWeapon = GetWorld()->SpawnActor<AWeapon>(StartingWeaponClass, Character->GetActorLocation(), Character->GetActorRotation());
+	EquippedWeapon->AttachToComponent(Character->ArmsMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("SOCKET_Weapon"));
 }
 
 void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -62,6 +58,19 @@ void UWeaponComponent::StartFireWeapon()
 void UWeaponComponent::StopFireWeapon()
 {
 	bIsFirePressed = false;
+}
+
+void UWeaponComponent::StartReloadWeapon()
+{
+	Character->bIsReloadingOrSwitching = true;
+	float Result = Character->ArmsMesh->GetAnimInstance()->Montage_Play(EquippedWeapon->ReloadMontage);
+
+	StopReloadWeapon(); // TODO: temp
+}
+
+void UWeaponComponent::StopReloadWeapon()
+{
+	Character->bIsReloadingOrSwitching = false;
 }
 
 void UWeaponComponent::WeaponSway(float DeltaTime)
@@ -113,7 +122,7 @@ void UWeaponComponent::FireWeapon()
 
 		UGameplayStatics::SpawnEmitterAttached(
 			MuzzleFlash,
-			Character->GunMesh,
+			EquippedWeapon->WeaponMesh,
 			"SOCKET_Muzzle",
 			FVector(),
 			FRotator(0.f, 90.f, 0.f),
@@ -121,7 +130,7 @@ void UWeaponComponent::FireWeapon()
 
 		UGameplayStatics::SpawnSoundAttached(
 			FireSound,
-			Character->GunMesh,
+			EquippedWeapon->WeaponMesh,
 			FName(),
 			FVector(),
 			EAttachLocation::SnapToTarget,

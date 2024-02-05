@@ -37,6 +37,9 @@ public:
 	UPROPERTY()
 	class APlayerHUD* HUD;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class AWeapon> StartingWeaponClass;
+
 	UPROPERTY()
 	class AWeapon* EquippedWeapon;
 
@@ -48,6 +51,8 @@ public:
 
 	void StartFireWeapon();
 	void StopFireWeapon();
+	void StartReloadWeapon();
+	void StopReloadWeapon();
 	void WeaponSway(float DeltaTime);
 	void SetHUDCrosshairs(float DeltaTime);
 

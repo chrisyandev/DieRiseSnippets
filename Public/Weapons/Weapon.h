@@ -47,4 +47,10 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
 	bool bIsAutomatic = true;
+
+	/**
+	* Weapon Animations
+	*/
+	UPROPERTY(EditAnywhere, Category = "Weapon Animations")
+	class UAnimMontage* ReloadMontage;
 };

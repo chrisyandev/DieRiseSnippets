@@ -33,14 +33,11 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = Mesh)
 	class USkeletalMeshComponent* ArmsMesh;
 
-	UPROPERTY(VisibleAnywhere, Category = Mesh)
-	class USkeletalMeshComponent* GunMesh;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	class UCameraComponent* FirstPersonCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	class UWeaponComponent* Weapon;
+	class UWeaponComponent* WeaponComp;
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsReloadingOrSwitching = false;
@@ -69,10 +66,11 @@ public:
 	struct FEnhancedInputActionValueBinding* MoveActionBinding;
 	struct FEnhancedInputActionValueBinding* LookActionBinding;
 
-	void FirePressed();
-	void FireReleased();
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	void FirePressed();
+	void FireReleased();
+	void ReloadPressed();
 
 	/**
 	* Weapon Recoil
