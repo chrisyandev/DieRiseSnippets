@@ -46,14 +46,23 @@ public:
 	EWeaponType CurrentWeaponType;
 	FHUDPackage HUDPackage;
 
-	bool bIsFirePressed = false;
-	bool bCanFire = true;
+	bool bIsFiring = false;
+	bool bIsFireOnCooldown = false;
+	bool bIsReloading = false;
 
-	void StartFireWeapon();
-	void StopFireWeapon();
-	void StartReloadWeapon();
-	void StopReloadWeapon();
-	void WeaponSway(float DeltaTime);
+	UFUNCTION(BlueprintCallable)
+	void UpdateReloadingAmmo();
+
+	UFUNCTION(BlueprintCallable)
+	void FinishReloading();
+
+	bool CanFire();
+	void StartFiring();
+	void StopFiring();
+	bool CanReload();
+	void StartReloading();
+	void InterruptReloading();
+	void Sway(float DeltaTime);
 	void SetHUDCrosshairs(float DeltaTime);
 
 	/**
@@ -124,6 +133,6 @@ public:
 	void HandleFireTimerFinished();
 
 private:
-	void FireWeapon();
+	void Fire();
 
 };

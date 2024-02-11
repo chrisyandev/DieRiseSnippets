@@ -6,6 +6,11 @@
 #include "Components/CapsuleComponent.h"
 #include "Weapons/WeaponComponent.h"
 #include "Components/TimelineComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Player/PlayerHUD.h"
+#include "Player/PlayerOverlayWidget.h"
+#include "Components/TextBlock.h"
+#include "Weapons/Weapon.h"
 
 #include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
@@ -42,11 +47,16 @@ void APlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(PlayerMappingContext, 0);
 		}
 	}
+
+	// Get reference to HUD
+	HUD = Cast<APlayerHUD>(UGameplayStatics::GetPlayerController(GetWorld(), 0)->GetHUD());
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	UpdateOverlay();
 }
 
 // Called to bind functionality to input
@@ -93,16 +103,22 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::FirePressed()
 {
-	WeaponComp->StartFireWeapon();
+	WeaponComp->StartFiring();
 }
 
 void APlayerCharacter::FireReleased()
 {
-	WeaponComp->StopFireWeapon();
+	WeaponComp->StopFiring();
 }
 
 void APlayerCharacter::ReloadPressed()
 {
-	WeaponComp->StartReloadWeapon();
+	WeaponComp->StartReloading();
+}
+
+void APlayerCharacter::UpdateOverlay()
+{
+	HUD->PlayerOverlayWidget->AmmoInMagText->SetText(FText::FromString(FString::Printf(TEXT("%d"), WeaponComp->EquippedWeapon->AmmoInMag)));
+	HUD->PlayerOverlayWidget->AmmoInReserveText->SetText(FText::FromString(FString::Printf(TEXT("%d"), WeaponComp->EquippedWeapon->AmmoInReserve)));
 }
 

@@ -2,11 +2,16 @@
 
 
 #include "Player/PlayerHUD.h"
+#include "Player/PlayerOverlayWidget.h"
+#include "GameFramework/PlayerController.h"
 
 void APlayerHUD::DrawHUD()
 {
 	Super::DrawHUD();
 
+	/**
+	* Crosshairs
+	*/
 	FVector2D ViewportSize;
 
 	if (GEngine == nullptr || GEngine->GameViewport == nullptr) return;
@@ -26,6 +31,24 @@ void APlayerHUD::DrawHUD()
 		DrawCrosshair(HUDPackage.CrosshairsRight, ViewportCenter, FVector2D(SpreadScaled, 0.f), HUDPackage.CrosshairsColor);
 		DrawCrosshair(HUDPackage.CrosshairsTop, ViewportCenter, FVector2D(0.f, -SpreadScaled), HUDPackage.CrosshairsColor);
 		DrawCrosshair(HUDPackage.CrosshairsBottom, ViewportCenter, FVector2D(0.f, SpreadScaled), HUDPackage.CrosshairsColor);
+	}
+}
+
+void APlayerHUD::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SetupPlayerOverlay();
+}
+
+void APlayerHUD::SetupPlayerOverlay()
+{
+	if (!PlayerOverlayWidgetClass) return;
+	
+	if (APlayerController* Controller = GetOwningPlayerController())
+	{
+		PlayerOverlayWidget = CreateWidget<UPlayerOverlayWidget>(Controller, PlayerOverlayWidgetClass);
+		PlayerOverlayWidget->AddToViewport();
 	}
 }
 

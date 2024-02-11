@@ -40,9 +40,6 @@ public:
 	class UWeaponComponent* WeaponComp;
 
 	UPROPERTY(BlueprintReadOnly)
-	bool bIsReloadingOrSwitching = false;
-
-	UPROPERTY(BlueprintReadOnly)
 	bool bHasRecoilReductionPerk = false;
 
 	/**
@@ -87,4 +84,10 @@ public:
 	FORCEINLINE FVector2D GetLookInput() { return LookActionBinding->GetValue().Get<FVector2D>(); }
 	FORCEINLINE FVector2D GetMoveInput() { return MoveActionBinding->GetValue().Get<FVector2D>(); }
 
+	/**
+	* HUD
+	*/
+	class APlayerHUD* HUD;
+
+	void UpdateOverlay();
 };

@@ -48,6 +48,15 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
 	bool bIsAutomatic = true;
 
+	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
+	int MagCapacity = 30;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
+	int AmmoInMag = MagCapacity;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
+	int AmmoInReserve = 90;
+
 	/**
 	* Weapon Animations
 	*/

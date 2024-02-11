@@ -36,7 +36,7 @@ void UWeaponComponent::BeginPlay()
 	RecoilAnimationFinished.BindUFunction(this, FName("HandleRecoilAnimationFinished"));
 	Character->RecoilAnimationTimeline->SetTimelineFinishedFunc(RecoilAnimationFinished);
 
-	// TEMP: Simulate equipping a weapon
+	// TODO: Temp way to simulate equipping a weapon
 	EquippedWeapon = GetWorld()->SpawnActor<AWeapon>(StartingWeaponClass, Character->GetActorLocation(), Character->GetActorRotation());
 	EquippedWeapon->AttachToComponent(Character->ArmsMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("SOCKET_Weapon"));
 }
@@ -45,132 +45,186 @@ void UWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	WeaponSway(DeltaTime);
+	Sway(DeltaTime);
 	SetHUDCrosshairs(DeltaTime);
 }
 
-void UWeaponComponent::StartFireWeapon()
+bool UWeaponComponent::CanFire()
 {
-	bIsFirePressed = true;
-	FireWeapon();
-}
-
-void UWeaponComponent::StopFireWeapon()
-{
-	bIsFirePressed = false;
-}
-
-void UWeaponComponent::StartReloadWeapon()
-{
-	Character->bIsReloadingOrSwitching = true;
-	float Result = Character->ArmsMesh->GetAnimInstance()->Montage_Play(EquippedWeapon->ReloadMontage);
-
-	StopReloadWeapon(); // TODO: temp
-}
-
-void UWeaponComponent::StopReloadWeapon()
-{
-	Character->bIsReloadingOrSwitching = false;
-}
-
-void UWeaponComponent::WeaponSway(float DeltaTime)
-{
-	if (!Character->bIsReloadingOrSwitching)
+	if (bIsFireOnCooldown || bIsReloading || EquippedWeapon->AmmoInMag == 0)
 	{
-		const float SwayFactor = 1.5f;
-		const float YawCorrection = -90.f; // corrects how the original mesh is rotated
-		const float MinPitch = -4.f;
-		const float MaxPitch = 4.f;
-		const float MinYaw = -8.f;
-		const float MaxYaw = 8.f;
-		const float MinRoll = -2.f;
-		const float MaxRoll = 2.f;
-		const float InterpSpeed = 3.f;
+		return false;
+	}
+	return true;
+}
 
-		const FRotator InitialRotation = FRotator::ZeroRotator;
-		const FVector2D LookInput = Character->GetLookInput();
+void UWeaponComponent::StartFiring()
+{
+	bIsFiring = true;
+	
+	if (CanFire())
+	{
+		Fire();
+		return;
+	}
 
-		const FRotator FinalRotation = FRotator(
-			LookInput.X * SwayFactor,
-			LookInput.Y * SwayFactor,
-			LookInput.Y * SwayFactor);
+	if (!CanFire() && CanReload())
+	{
+		StartReloading();
+		return;
+	}
 
-		const FRotator NewRotation = UKismetMathLibrary::RInterpTo(
-			Character->ArmsMesh->GetRelativeRotation(),
-			FRotator(
-				FMath::Clamp(-(InitialRotation.Pitch + FinalRotation.Pitch), MinPitch, MaxPitch),
-				FMath::Clamp(
-					InitialRotation.Yaw + FinalRotation.Yaw + YawCorrection,
-					MinYaw + YawCorrection,
-					MaxYaw + YawCorrection),
-				FMath::Clamp(InitialRotation.Roll + FinalRotation.Roll, MinRoll, MaxRoll)),
-			DeltaTime, InterpSpeed);
-
-		Character->ArmsMesh->SetRelativeRotation(NewRotation);
+	if (bIsReloading)
+	{
+		InterruptReloading();
+		if (CanFire())
+		{
+			Fire();
+			return;
+		}
 	}
 }
 
-void UWeaponComponent::FireWeapon()
+void UWeaponComponent::StopFiring()
 {
-	if (bCanFire)
+	bIsFiring = false;
+}
+
+bool UWeaponComponent::CanReload()
+{
+	if (bIsReloading || EquippedWeapon->AmmoInMag == EquippedWeapon->MagCapacity || EquippedWeapon->AmmoInReserve == 0)
 	{
-		bCanFire = false;
-		StartFireTimer();
+		return false;
+	}
+	return true;
+}
 
-		StartRecoil();
-		StartRecoilAnimation();
+void UWeaponComponent::StartReloading()
+{
+	if (!CanReload()) return;
 
-		UGameplayStatics::SpawnEmitterAttached(
-			MuzzleFlash,
-			EquippedWeapon->WeaponMesh,
-			"SOCKET_Muzzle",
-			FVector(),
-			FRotator(0.f, 90.f, 0.f),
-			EAttachLocation::SnapToTarget);
+	bIsReloading = true;
 
-		UGameplayStatics::SpawnSoundAttached(
-			FireSound,
-			EquippedWeapon->WeaponMesh,
-			FName(),
-			FVector(),
-			EAttachLocation::SnapToTarget,
-			false,
-			1.f, 1.f, 0.f,
-			FireSoundAttenuation);
+	Character->ArmsMesh->GetAnimInstance()->Montage_Play(EquippedWeapon->ReloadMontage);
+}
 
-		FHitResult OutHit;
-		FVector TraceStart = Character->FirstPersonCamera->GetComponentLocation();
-		FVector TraceEnd = TraceStart + (Character->FirstPersonCamera->GetForwardVector() * TRACE_LENGTH);
+void UWeaponComponent::InterruptReloading()
+{
+	bIsReloading = false;
+	
+	Character->ArmsMesh->GetAnimInstance()->Montage_Stop(0.1f, EquippedWeapon->ReloadMontage);
+}
 
-		GetWorld()->LineTraceSingleByChannel(
-			OutHit,
-			TraceStart,
-			TraceEnd,
-			ECollisionChannel::ECC_Visibility);
+void UWeaponComponent::UpdateReloadingAmmo()
+{
+	int AmmoNeeded = EquippedWeapon->MagCapacity - EquippedWeapon->AmmoInMag;
+	int AmmoTakenFromReserve = EquippedWeapon->AmmoInReserve - AmmoNeeded >= 0 ? AmmoNeeded : EquippedWeapon->AmmoInReserve;
+	EquippedWeapon->AmmoInMag += AmmoTakenFromReserve;
+	EquippedWeapon->AmmoInReserve -= AmmoTakenFromReserve;
+}
 
-		if (OutHit.IsValidBlockingHit())
-		{
-			UGameplayStatics::SpawnEmitterAtLocation(
-				GetWorld(),
-				BulletImpactParticle,
-				OutHit.ImpactPoint,
-				UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
-				true);
+void UWeaponComponent::FinishReloading()
+{
+	bIsReloading = false;
 
-			UGameplayStatics::SpawnSoundAtLocation(
-				GetWorld(),
-				BulletImpactSound,
-				OutHit.ImpactPoint);
+	if (bIsFiring && EquippedWeapon->bIsAutomatic)
+	{
+		StartFiring();
+	}
+}
 
-			UGameplayStatics::SpawnDecalAttached(
-				BulletImpactDecal,
-				FVector(4.f, 4.f, 4.f),
-				OutHit.GetComponent(),
-				OutHit.BoneName,
-				OutHit.ImpactPoint,
-				UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
-				EAttachLocation::KeepWorldPosition);
-		}
+void UWeaponComponent::Sway(float DeltaTime)
+{
+	const float SwayFactor = 1.5f;
+	const float YawCorrection = -90.f; // corrects how the original mesh is rotated
+	const float MinPitch = -4.f;
+	const float MaxPitch = 4.f;
+	const float MinYaw = -8.f;
+	const float MaxYaw = 8.f;
+	const float MinRoll = -2.f;
+	const float MaxRoll = 2.f;
+	const float InterpSpeed = 3.f;
+
+	const FRotator InitialRotation = FRotator::ZeroRotator;
+	const FVector2D LookInput = Character->GetLookInput();
+
+	const FRotator FinalRotation = FRotator(
+		LookInput.X * SwayFactor,
+		LookInput.Y * SwayFactor,
+		LookInput.Y * SwayFactor);
+
+	const FRotator NewRotation = UKismetMathLibrary::RInterpTo(
+		Character->ArmsMesh->GetRelativeRotation(),
+		FRotator(
+			FMath::Clamp(-(InitialRotation.Pitch + FinalRotation.Pitch), MinPitch, MaxPitch),
+			FMath::Clamp(
+				InitialRotation.Yaw + FinalRotation.Yaw + YawCorrection,
+				MinYaw + YawCorrection,
+				MaxYaw + YawCorrection),
+			FMath::Clamp(InitialRotation.Roll + FinalRotation.Roll, MinRoll, MaxRoll)),
+		DeltaTime, InterpSpeed);
+
+	Character->ArmsMesh->SetRelativeRotation(NewRotation);
+}
+
+void UWeaponComponent::Fire()
+{
+	StartFireTimer();
+	--EquippedWeapon->AmmoInMag;
+
+	StartRecoil();
+	StartRecoilAnimation();
+
+	UGameplayStatics::SpawnEmitterAttached(
+		MuzzleFlash,
+		EquippedWeapon->WeaponMesh,
+		"SOCKET_Muzzle",
+		FVector(),
+		FRotator(0.f, 90.f, 0.f),
+		EAttachLocation::SnapToTarget);
+
+	UGameplayStatics::SpawnSoundAttached(
+		FireSound,
+		EquippedWeapon->WeaponMesh,
+		FName(),
+		FVector(),
+		EAttachLocation::SnapToTarget,
+		false,
+		1.f, 1.f, 0.f,
+		FireSoundAttenuation);
+
+	FHitResult OutHit;
+	FVector TraceStart = Character->FirstPersonCamera->GetComponentLocation();
+	FVector TraceEnd = TraceStart + (Character->FirstPersonCamera->GetForwardVector() * TRACE_LENGTH);
+
+	GetWorld()->LineTraceSingleByChannel(
+		OutHit,
+		TraceStart,
+		TraceEnd,
+		ECollisionChannel::ECC_Visibility);
+
+	if (OutHit.IsValidBlockingHit())
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			BulletImpactParticle,
+			OutHit.ImpactPoint,
+			UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
+			true);
+
+		UGameplayStatics::SpawnSoundAtLocation(
+			GetWorld(),
+			BulletImpactSound,
+			OutHit.ImpactPoint);
+
+		UGameplayStatics::SpawnDecalAttached(
+			BulletImpactDecal,
+			FVector(4.f, 4.f, 4.f),
+			OutHit.GetComponent(),
+			OutHit.BoneName,
+			OutHit.ImpactPoint,
+			UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
+			EAttachLocation::KeepWorldPosition);
 	}
 }
 
@@ -254,19 +308,18 @@ void UWeaponComponent::SetRecoilAnimationVariables()
 
 void UWeaponComponent::StartFireTimer()
 {
-	bCanFire = false;
+	bIsFireOnCooldown = true;
 
-	Character->GetWorldTimerManager()
-		.SetTimer(FireTimer, this, &UWeaponComponent::HandleFireTimerFinished, EquippedWeapon->FireDelay);
+	Character->GetWorldTimerManager().SetTimer(FireTimer, this, &UWeaponComponent::HandleFireTimerFinished, EquippedWeapon->FireDelay);
 }
 
 void UWeaponComponent::HandleFireTimerFinished()
 {
-	bCanFire = true;
+	bIsFireOnCooldown = false;
 
-	if (bIsFirePressed && EquippedWeapon->bIsAutomatic)
+	if (bIsFiring && EquippedWeapon->bIsAutomatic)
 	{
-		FireWeapon();
+		StartFiring();
 	}
 }
 

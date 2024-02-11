@@ -31,10 +31,23 @@ class DIERISE_API APlayerHUD : public AHUD
 public:
 	virtual void DrawHUD() override;
 
+protected:
+	virtual void BeginPlay() override;
+
 public:
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UUserWidget> PlayerOverlayWidgetClass;
+
 	UPROPERTY(EditAnywhere)
 	float CrosshairSpreadMax = 16.f;
 
+	class UPlayerOverlayWidget* PlayerOverlayWidget;
+
+	void SetupPlayerOverlay();
+
+	/**
+	* Mutators
+	*/
 	FORCEINLINE void SetHUDPackage(const FHUDPackage& Package) { HUDPackage = Package; }
 
 private:
