@@ -225,6 +225,16 @@ void UWeaponComponent::Fire()
 			OutHit.ImpactPoint,
 			UKismetMathLibrary::MakeRotFromX(OutHit.Normal),
 			EAttachLocation::KeepWorldPosition);
+
+		// Apply Damage
+		const float DamageToCause = OutHit.BoneName.ToString() == FString("head") ? EquippedWeapon->Damage : 2 * EquippedWeapon->Damage;
+		UGameplayStatics::ApplyDamage(
+			OutHit.GetActor(),
+			DamageToCause,
+			Controller,
+			Character,
+			UDamageType::StaticClass()
+		);
 	}
 }
 

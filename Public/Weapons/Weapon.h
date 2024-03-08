@@ -57,6 +57,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
 	int AmmoInReserve = 90;
 
+	UPROPERTY(EditAnywhere, Category = "Weapon Stats")
+	int Damage = 10;
+
 	/**
 	* Weapon Animations
 	*/

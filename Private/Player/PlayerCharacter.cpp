@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Weapons/WeaponComponent.h"
 #include "Components/TimelineComponent.h"
+#include "HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/PlayerHUD.h"
 #include "Player/PlayerOverlayWidget.h"
@@ -33,6 +34,8 @@ APlayerCharacter::APlayerCharacter()
 	WeaponComp = CreateDefaultSubobject<UWeaponComponent>(TEXT("WeaponComp"));
 	RecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
 	RecoilAnimationTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilAnimationTimeline"));
+
+	HealthComp = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComp"));
 }
 
 void APlayerCharacter::BeginPlay()

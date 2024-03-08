@@ -39,6 +39,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UWeaponComponent* WeaponComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class UHealthComponent* HealthComp;
+
 	UPROPERTY(BlueprintReadOnly)
 	bool bHasRecoilReductionPerk = false;
 
