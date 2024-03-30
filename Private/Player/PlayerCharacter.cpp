@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Weapons/WeaponComponent.h"
+#include "Weapons/RecoilComponent.h"
 #include "Components/TimelineComponent.h"
 #include "HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -32,6 +33,7 @@ APlayerCharacter::APlayerCharacter()
 	ArmsMesh->CastShadow = false;
 
 	WeaponComp = CreateDefaultSubobject<UWeaponComponent>(TEXT("WeaponComp"));
+	RecoilComp = CreateDefaultSubobject<URecoilComponent>(TEXT("RecoilComp"));
 	RecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
 	RecoilAnimationTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilAnimationTimeline"));
 
@@ -53,6 +55,10 @@ void APlayerCharacter::BeginPlay()
 
 	// Get reference to HUD
 	HUD = Cast<APlayerHUD>(UGameplayStatics::GetPlayerController(GetWorld(), 0)->GetHUD());
+
+	// Bind functions to weapon events
+	WeaponComp->OnWeaponFireStart.AddDynamic(this, &APlayerCharacter::OnWeaponFireStart);
+	WeaponComp->OnWeaponFireEnd.AddDynamic(this, &APlayerCharacter::OnWeaponFireEnd);
 }
 
 void APlayerCharacter::Tick(float DeltaTime)
@@ -88,6 +94,17 @@ void APlayerCharacter::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 	WeaponComp->Character = this;
+	RecoilComp->Character = this;
+}
+
+void APlayerCharacter::OnWeaponFireStart()
+{
+	OnStartRecoil();
+}
+
+void APlayerCharacter::OnWeaponFireEnd()
+{
+	OnStopRecoil();
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)

@@ -30,7 +30,7 @@ public:
 	/**
 	* General
 	*/
-	UPROPERTY(VisibleAnywhere, Category = Mesh)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh)
 	class USkeletalMeshComponent* ArmsMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -40,10 +40,25 @@ public:
 	class UWeaponComponent* WeaponComp;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class URecoilComponent* RecoilComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UHealthComponent* HealthComp;
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bHasRecoilReductionPerk = false;
+
+	UFUNCTION()
+	void OnWeaponFireStart();
+
+	UFUNCTION()
+	void OnWeaponFireEnd();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStartRecoil();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStopRecoil();
 
 	/**
 	* Input

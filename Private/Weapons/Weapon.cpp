@@ -10,6 +10,9 @@ AWeapon::AWeapon()
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	SetRootComponent(WeaponMesh);
 
+	MagazineMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MagazineMesh"));
+	MagazineMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MagazineMesh->SetupAttachment(WeaponMesh, "SOCKET_Magazine");
 }
 
 void AWeapon::BeginPlay()

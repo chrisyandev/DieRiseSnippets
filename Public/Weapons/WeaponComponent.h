@@ -6,8 +6,10 @@
 #include "Components/ActorComponent.h"
 #include "Weapons/WeaponType.h"
 #include "Player/PlayerHUD.h"
-#include "Components/TimelineComponent.h"
 #include "WeaponComponent.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWeapon_FireStart);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWeapon_FireEnd);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class DIERISE_API UWeaponComponent : public UActorComponent
@@ -24,7 +26,6 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
-
 	/**
 	* General
 	*/
@@ -40,15 +41,26 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class AWeapon> StartingWeaponClass;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	class AWeapon* EquippedWeapon;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsFiring = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsFireOnCooldown = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsReloading = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	FName bRecoilType = FName(TEXT("Default"));
+
+	FWeapon_FireStart OnWeaponFireStart;
+	FWeapon_FireEnd OnWeaponFireEnd;
 
 	EWeaponType CurrentWeaponType;
 	FHUDPackage HUDPackage;
-
-	bool bIsFiring = false;
-	bool bIsFireOnCooldown = false;
-	bool bIsReloading = false;
 
 	UFUNCTION(BlueprintCallable)
 	void UpdateReloadingAmmo();
@@ -85,44 +97,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Effects)
 	class UMaterialInterface* BulletImpactDecal;
-
-	/**
-	* Weapon Recoil
-	*/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Recoil)
-	UCurveFloat* RecoilCurve;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Recoil)
-	UCurveFloat* RecoilAnimationCurve;
-
-	FOnTimelineFloat RecoilTrack;
-	FOnTimelineFloat RecoilAnimationTrack;
-	FOnTimelineEvent RecoilAnimationFinished;
-
-	float RecoilVerticalAmount = 0.5f;
-	float RecoilHorizontalAmount = 0.3f;
-	float RecoilDuration = 0.03f;
-	float PreRecoilArmsPitch = 0.f;
-	float PostRecoilArmsPitch = 0.f;
-	float PreRecoilArmsLocationX = 0.f;
-	float PostRecoilArmsLocationX = 0.f;
-	float PullBackAmount = 3.f;
-	bool bHasSetRecoilVariables = false;
-
-	UFUNCTION()
-	void UpdateRecoil(float RecoilValue);
-
-	UFUNCTION()
-	void UpdateRecoilAnimation(float RecoilAnimationValue);
-
-	UFUNCTION()
-	void HandleRecoilAnimationFinished();
-
-	void StartRecoil();
-	void StartRecoilAnimation();
-	float GetRecoilMultiplier();
-	float GetRecoilPitch(float ControlPitch);
-	void SetRecoilAnimationVariables();
 	
 	/**
 	* Automatic Fire
